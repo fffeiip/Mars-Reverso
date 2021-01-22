@@ -3,12 +3,12 @@
 #1024 é o limite de caracteres também
 output:	.space	1024
 #o caminho do arquivo tem que ir todo pra funcionar
-fileName: .asciiz "/home/felipe/Documents/Workspace/ArquiteturaComputadores/Projeto/teste.txt"      # filename for input
-fileOutputName: .asciiz "/home/felipe/Documents/Workspace/ArquiteturaComputadores/Projeto/output.txt"      # filename for output
+fileName: .asciiz "/home/felipe/Documents/Workspace/ArquiteturaComputadores/mundo-reverso-assembly/teste.txt"      # filename for input
+fileOutputName: .asciiz "/home/felipe/Documents/Workspace/ArquiteturaComputadores/mundo-reverso-assembly/output.txt"      # filename for output
 fileWords: .space 1024
 
 .text
-	.globl main
+.globl main
 main:
 	#open a file for writing
 	li   $v0, 13       # system call for open file
@@ -31,10 +31,8 @@ main:
 	add	$t1, $zero, $v0		# Copy some of our parameters for our reverse function
 	add	$t2, $zero, $a0		# We need to save our input string to $t2, it gets
 	add	$a0, $zero, $v0		# butchered by the syscall.
-	li	$v0, 1			# This prints the length that we found in 'strlen'
-
-	syscall
 	
+
 reverse:
 	li	$t0, 0			# Set t0 to zero to be sure
 	li	$t3, 0			# and the same for t3
@@ -42,11 +40,35 @@ reverse:
 	reverse_loop:
 		add	$t3, $t2, $t0		# $t2 is the base address for our 'input' array, add loop index
 		lb	$t4, 0($t3)		# load a byte at a time according to counter
+		
 		beqz	$t4, writeFile		# We found the null-byte
+		
+		blt $t4, 'A', save # if it’s < A, is not a letter skip
+		nop	
+		ble $t4, 'Z', isUpper # if it’s >=A and <=Z, it’s an uppercase letter
+		nop
+		blt $t4, 'a', save # if it’s < a, is not a letter, skip
+		nop
+		ble $t4, 'z', isLower # if it’s >=a and <=z, it’s a lowercase letter
+		nop	
+		b save # in any other case, go to next character
+		nop
+	isUpper:
+		addi $t4, $t4, 32 # convert upper to lowercase
+		b save # save the character in the array
+		nop
+	isLower:
+		addi $t4, $t4, -32 # convert lower to uppercase
+	save:
+		#sb $t0,	0($t2) # save the converter character in the array
 		sb	$t4, output($t1)		# Overwrite this byte address in memory	
+		subi 	$t4, $t4 , 20
+		
 		subi	$t1, $t1, 1		# Subtract our overall string length by 1 (j--)
 		addi	$t0, $t0, 1		# Advance our counter (i++)
 		j	reverse_loop		# Loop until we reach our condition
+
+	
 writeFile:
 	#abre o arquivo output.txt
 	li $v0,13
