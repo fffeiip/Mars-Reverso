@@ -10,63 +10,58 @@ fileWords: .space 1024
 .text
 .globl main
 main:
-	#open a file for writing
-	li   $v0, 13       # system call for open file
-	la   $a0, fileName      # board file name
-	li   $a1, 0        # Open for reading
-	syscall            # open a file (file descriptor returned in $v0)
-	move $s0, $v0      # save the file descriptor 
+	open_file:
+		li   $v0, 13       # codigo de abrir arquivo
+		la   $a0, fileName      # carrega endereço de arquivo
+		li   $a1, 0        # abre pra leitura
+		syscall            
+		move $s0, $v0      # salva descritor de arquivo
 
-	#read from file
-	li   $v0, 14       # system call for read from file
-	move $a0, $s0      # file descriptor 
-	la   $a1, fileWords   # address of buffer to which to read
-	la   $a2, 1024     # hardcoded buffer length
-	syscall            # read from file
-
+	read_file:
+		li   $v0, 14       # codigo para ler arquivo
+		move $a0, $s0      # carrega descritor
+		la   $a1, fileWords   # carrega endereço do buffer de leitura
+		la   $a2, 1024     # tamanho de buffer hardcoded 
+		syscall            
 
 	la	$a0, fileWords		#carrega a posição do arquivo
-	jal	strlen			# JAL to strlen function, saves return address to $ra
+	jal	strlen			# calcula tamanho da string e salva retorno em $ra
 	
-	add	$t1, $zero, $v0		# Copy some of our parameters for our reverse function
-	add	$t2, $zero, $a0		# We need to save our input string to $t2, it gets
-	add	$a0, $zero, $v0		# butchered by the syscall.
-	
-
+	add	$t1, $zero, $v0		# Copia de parametros
+	add	$t2, $zero, $a0		
 reverse:
-	li	$t0, 0			# Set t0 to zero to be sure
-	li	$t3, 0			# and the same for t3
+	li	$t0, 0			# reseta t0 e t3 
+	li	$t3, 0			
 	
 	reverse_loop:
-		add	$t3, $t2, $t0		# $t2 is the base address for our 'input' array, add loop index
-		lb	$t4, 0($t3)		# load a byte at a time according to counter
+		add	$t3, $t2, $t0		# endereço de base do array
+		lb	$t4, 0($t3)		# carrega a posição de acordo com o contador
 		
-		beqz	$t4, writeFile		# We found the null-byte
+		beqz	$t4, writeFile		# chegou no final
 		
-		blt $t4, 'A', save # if it’s < A, is not a letter skip
+		blt $t4, 'A', save # < A, não é uma letra
 		nop	
-		ble $t4, 'Z', isUpper # if it’s >=A and <=Z, it’s an uppercase letter
+		ble $t4, 'Z', isUpper #  >=A e <=Z, é uma letra maiuscula
 		nop
-		blt $t4, 'a', save # if it’s < a, is not a letter, skip
+		blt $t4, 'a', save #  < a, não é uma letra
 		nop
-		ble $t4, 'z', isLower # if it’s >=a and <=z, it’s a lowercase letter
+		ble $t4, 'z', isLower #  >=a e <=z, é uma letra minuscula
 		nop	
-		b save # in any other case, go to next character
+		b save # default case
 		nop
 	isUpper:
-		addi $t4, $t4, 32 # convert upper to lowercase
-		b save # save the character in the array
+		addi $t4, $t4, 32 # converte pela tabela ascii maiuscula para minuscula
+		b save 
 		nop
 	isLower:
-		addi $t4, $t4, -32 # convert lower to uppercase
+		addi $t4, $t4, -32 # converte pela tabela ascii minuscula pra maiuscula
 	save:
-		#sb $t0,	0($t2) # save the converter character in the array
-		sb	$t4, output($t1)		# Overwrite this byte address in memory	
+		sb	$t4, output($t1)	# Sobrescreve o byte	
 		subi 	$t4, $t4 , 20
 		
-		subi	$t1, $t1, 1		# Subtract our overall string length by 1 (j--)
-		addi	$t0, $t0, 1		# Advance our counter (i++)
-		j	reverse_loop		# Loop until we reach our condition
+		subi	$t1, $t1, 1		# subtrai o contador de tamanho da string
+		addi	$t0, $t0, 1		# contador + 1
+		j	reverse_loop		# jump pra label loop
 
 	
 writeFile:
@@ -81,7 +76,7 @@ writeFile:
 	li $v0,15
 	move $a0,$s1
 	la $a1, output
-	la $a2, ($t0) #valor contido (lenght do texto)
+	la $a2, ($t0) #carrega tamanho do texto
 	syscall
 	
 	#fecha arquivo
@@ -89,21 +84,13 @@ writeFile:
 	move $a0, $s1
 	syscall
 exit:
-	li	$v0, 4			# Print
-	la	$a0, output		# the string!
-	syscall
+	imprime:
+		li	$v0, 4			
+		la	$a0, output		
+		syscall
 		
-	li	$v0, 10			# exit()
+	li	$v0, 10			
 	syscall
-	
-
-# strlen:
-# a0 is our input string
-# v0 returns the length
-# -- This function loops over the character array until it encounters
-# the null byte, interestingly, the 0x0a character is stored by default
-# for input strings requested through the syscall. So we just subtract one
-# from the end result.
 
 strlen:
 	li	$t0, 0
