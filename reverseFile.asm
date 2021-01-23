@@ -39,15 +39,15 @@ reverse:
 		
 		beqz	$t4, writeFile		# chegou no final
 		
-		blt $t4, 'A', save # < A, não é uma letra
+		blt $t4, 'A', checkSpace  # < A, não é uma letra
 		nop	
 		ble $t4, 'Z', isUpper #  >=A e <=Z, é uma letra maiuscula
 		nop
-		blt $t4, 'a', save #  < a, não é uma letra
+		blt $t4, 'a', checkSpace #  < a, não é uma letra
 		nop
 		ble $t4, 'z', isLower #  >=a e <=z, é uma letra minuscula
 		nop	
-		b save # default case
+		b save # default case (quando n é letra ou caracter especial)
 		nop
 	isUpper:
 		addi $t4, $t4, 32 # converte pela tabela ascii maiuscula para minuscula
@@ -56,14 +56,14 @@ reverse:
 	isLower:
 		addi $t4, $t4, -32 # converte pela tabela ascii minuscula pra maiuscula
 	save:
-		sb	$t4, output($t1)	# Sobrescreve o byte	
-		subi 	$t4, $t4 , 20
-		
+		sb	$t4, output($t1)	# Sobrescreve o byte			
 		subi	$t1, $t1, 1		# subtrai o contador de tamanho da string
 		addi	$t0, $t0, 1		# contador + 1
 		j	reverse_loop		# jump pra label loop
-
-	
+	checkSpace:
+		beq $t4, ' ', save		# se for espaço em branco salva e volta pro loop
+		add $t1, $t4, $zero
+			
 writeFile:
 	#abre o arquivo output.txt
 	li $v0,13
@@ -76,7 +76,7 @@ writeFile:
 	li $v0,15
 	move $a0,$s1
 	la $a1, output
-	la $a2, ($t0) #carrega tamanho do texto
+	la $a2, 0($t0)  #carrega tamanho do texto
 	syscall
 	
 	#fecha arquivo
@@ -98,11 +98,16 @@ strlen:
 	
 	strlen_loop:
 		add	$t2, $a0, $t0
-		lb	$t1, 0($t2)
+		lb	$t1, 0($t2)		
+
 		beqz	$t1, strlen_exit
-		addiu	$t0, $t0, 1
-		j	strlen_loop
-		
+		beq $t1, 0x20, counter_loop		
+		blt $t1, 'A', strlen_exit
+
+		counter_loop:
+			addiu	$t0, $t0, 1
+			j	strlen_loop
+
 	strlen_exit:
 		subi	$t0, $t0, 1
 		add	$v0, $zero, $t0
